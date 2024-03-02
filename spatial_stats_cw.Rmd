@@ -1,0 +1,122 @@
+---
+title: "Spatial Statistics Coursework"
+author: "01717289"
+date: "2024-02-28"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Installing Required Package
+
+```{r cars}
+install.packages("readxl")
+library(readxl)
+install.packages("readxl")
+library(readxl)
+install.packages("ggplot2")
+library(ggplot2)
+install.packages("rnaturalearth")
+library(rnaturalearth)
+```
+
+## Obtaining data
+```{r pressure, echo=FALSE}
+my_data <- read_excel("Project2.xlsx")
+tmax <- my_data$tmax
+lat <- my_data$lat
+lon <- my_data$lon
+year <- my_data$year
+month <- my_data$month
+```
+
+
+## Question 1
+```{r}
+simple_kriging <- function(lat_p, lon_p, beta=1) {
+  N <- length(lon)
+  sigmasquared <- var(tmax)
+  # Gaussian covariance parameters
+  mu <- mean(tmax) # Use the sample mean
+  Sigma <- matrix(0,N,N) # covariance between locations
+  for (ii in 1:N) {
+    for (jj in 1:N) {
+    d <- sqrt((lon[ii]-lon[jj])^2+(lat[ii]-lat[jj])^2)
+    Sigma[ii, jj] <- sigmasquared*exp(-beta*d^2) 
+    } 
+  }
+  invSig <- solve(Sigma) # inverse covariance
+  lat_pred <- c(lat_p) # grid of latitudes to be predicted
+  lon_pred <- c(lon_p) # grid of longitudes to be predicted
+  latl <- length(lat_pred)
+  lonl <- length(lon_pred)
+  XP <- matrix(0,lonl,latl)
+  XE <- matrix(0,lonl,latl)
+  for (ii in 1:lonl) { # kriging procedure
+    for (jj in 1:latl) {
+    d <- sqrt((lon_pred[ii]-lon)^2+(lat_pred[jj]-lat)^2)
+    K <- sigmasquared*exp(-beta*d^2) # K vector
+    XP[ii, jj] <- mu+K%*%invSig%*%(tmax-mu) # predictions
+    XE[ii, jj] <- sigmasquared-K%*%invSig%*%K 
+    }
+  }
+  
+  # # plots (preliminaries)
+  # sea <- ne_download(scale = 10, type = 'ocean', category = "physical",
+  # returnclass = "sf") # this is to remove ocean predictions
+  # FPlat <- numeric(latl*lonl) # a (hacky) way of including sample points
+  # FPlat[1:length(lat)]<- lat
+  # FPlon <- numeric(latl*lonl)
+  # 3
+  # FPlon[1:length(lon)]<- lon
+  # # prediction plot
+  # data <- cbind(expand.grid(Lng = lon_pred, Lat = lat_pred), P = c(expand.grid(XP)))
+  # ggplot(data) + ggtitle("Predictions") +
+  # geom_contour_filled(aes(Lng,Lat,z=Var1),bins=20,color="white",linewidth=0) +
+  # guides(colour = "colorbar", size = "legend", shape = "legend") +
+  # geom_sf(data = sea, fill = "white") +
+  # coord_sf(ylim = c(50, 59.5), xlim = c(-10.5, 3), expand = FALSE) +
+  # geom_point(aes(FPlon,FPlat),colour="red")
+  
+  return(c(XP, XE))
+}
+
+```
+
+
+```{r}
+imp <- simple_kriging(51.499,-0.175)
+```
+
+```{r}
+print(paste0("The predicted value of tmax at Imperial College London is ", imp[1]))
+```
+
+## Question 2
+```{r}
+print(paste0("The corresponding prediction error at this location is ", imp[2]))
+```
+
+## Question 3
+```{r}
+ucl <- simple_kriging(51.525,-0.134)
+print(paste0("The predicted value of tmax at UCL is ", ucl[1]))
+print(paste0("The corresponding prediction error at this location is ", ucl[2]))
+```
+
+## Question 5
+```{r}
+imp2 <- simple_kriging(51.499,-0.175,beta=2)
+print(paste0("The predicted value of tmax at Imperial College London with beta=2 is ", imp2[1]))
+print(paste0("The corresponding prediction error at this location is ", imp2[2]))
+```
+
+## Question 7
+
+
+
+
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
